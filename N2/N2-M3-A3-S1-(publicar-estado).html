@@ -1366,10 +1366,36 @@ function showFloatingHint(targetElement, message, position = 'top') {
       floatingHint.style.transform = 'translateX(-50%)';
     }, 10);
   } else if (position === 'left') {
-    const leftOffset = isMobile ? -5 : -10;
-    floatingHint.style.left = `${targetRect.left - phoneRect.left + leftOffset}px`;
-    floatingHint.style.top = `${targetRect.top - phoneRect.top + targetRect.height / 2}px`;
-    floatingHint.style.transform = 'translateX(-100%) translateY(-50%)';
+    // Posición especial para botones en la esquina derecha
+    const targetCenterX = targetRect.left - phoneRect.left + targetRect.width / 2;
+    const screenWidth = screenRect.width;
+    let hintLeft = targetCenterX;
+    
+    setTimeout(() => {
+      const hintWidth = floatingHint.offsetWidth;
+      const leftOffset = isMobile ? -5 : -10;
+      
+      // Calcular posición inicial desde la izquierda del botón
+      let finalLeft = targetRect.left - phoneRect.left + leftOffset;
+      
+      // Si el tooltip se saldría por la izquierda, posicionarlo completamente a la izquierda del botón
+      if (finalLeft - hintWidth < margin) {
+        finalLeft = targetRect.left - phoneRect.left - hintWidth - (isMobile ? 8 : 15);
+        floatingHint.style.transform = 'translateY(-50%)';
+      } else {
+        finalLeft = targetRect.left - phoneRect.left + leftOffset;
+        floatingHint.style.transform = 'translateX(-100%) translateY(-50%)';
+      }
+      
+      // Asegurarse de que esté dentro de los límites
+      if (finalLeft < margin) {
+        finalLeft = margin;
+        floatingHint.style.transform = 'translateY(-50%)';
+      }
+      
+      floatingHint.style.left = `${finalLeft}px`;
+      floatingHint.style.top = `${targetRect.top - phoneRect.top + targetRect.height / 2}px`;
+    }, 10);
   } else if (position === 'bottom') {
     const targetCenterX = targetRect.left - phoneRect.left + targetRect.width / 2;
     const screenWidth = screenRect.width;
