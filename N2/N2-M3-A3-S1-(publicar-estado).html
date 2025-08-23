@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <title>Simulador: WhatsApp - Publicar Estado</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap');
@@ -156,10 +156,18 @@
       background: var(--samsung-bg);
       font-family: "Roboto", -apple-system, BlinkMacSystemFont, sans-serif;
       height: 100vh;
+      height: 100dvh; /* Dynamic viewport height */
       margin: 0;
       padding: 0;
       overflow: hidden;
       box-sizing: border-box;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .phone-wrapper {
@@ -715,8 +723,102 @@
       }
     }
 
-    /* Responsive Design - Full viewport utilization */
-    @media (max-width: 768px) {
+    /* Responsive Design - Mobile First */
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+        font-size: 14px;
+      }
+      
+      .phone-wrapper {
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh; /* Dynamic viewport height para mejor soporte móvil */
+      }
+      
+      .phone {
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+      }
+      
+      /* Step indicator más pequeño en móvil */
+      .step-indicator {
+        top: 10px;
+        right: 8px;
+        padding: 4px 8px;
+        font-size: 10px;
+        border-radius: 12px;
+      }
+      
+      /* Floating hints optimizados para móvil */
+      .floating-hint {
+        font-size: 11px;
+        padding: 6px 12px;
+        max-width: 200px;
+        border-radius: 16px;
+      }
+      
+      /* Photo grid más compacto */
+      .photo-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 12px;
+        max-height: calc(100vh - 120px);
+      }
+      
+      /* Status controls más grandes para touch */
+      .status-controls {
+        bottom: 15px;
+        left: 12px;
+        right: 12px;
+        gap: 12px;
+      }
+      
+      .status-text-input {
+        font-size: 14px;
+        padding: 10px 14px;
+      }
+      
+      .send-button {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+      }
+      
+      /* Status camera button más grande en móvil */
+      .status-camera {
+        width: 56px;
+        height: 56px;
+        font-size: 22px;
+        border: 2px solid white;
+      }
+      
+      /* Modales responsive */
+      #successModal .success-content,
+      #hintModal .hint-content,
+      #helpModal .help-content {
+        max-width: 280px;
+        width: 85%;
+        margin: 0 10px;
+        padding: 20px 16px;
+      }
+      
+      #successModal h3,
+      #hintModal h3,
+      #helpModal h3 {
+        font-size: 15px;
+        line-height: 1.4;
+      }
+      
+      /* WhatsApp header más compacto */
+      .whatsapp-status-screen > div:first-child {
+        height: 50px !important;
+        padding: 0 12px !important;
+      }
+    }
+    
+    @media (max-width: 768px) and (min-width: 481px) {
       body {
         padding: 0;
       }
@@ -724,11 +826,35 @@
       .phone-wrapper {
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
       }
       
       .phone {
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
+      }
+      
+      /* Step indicator tablet */
+      .step-indicator {
+        top: 15px;
+        right: 10px;
+        padding: 5px 9px;
+        font-size: 10.5px;
+      }
+      
+      /* Floating hints tablet */
+      .floating-hint {
+        font-size: 12px;
+        padding: 7px 14px;
+        max-width: 220px;
+      }
+      
+      /* Photo grid tablet */
+      .photo-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        padding: 14px;
       }
     }
     
@@ -745,6 +871,31 @@
       .phone {
         width: 100vw;
         height: 100vh;
+      }
+    }
+    
+    /* Landscape mobile optimization */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .step-indicator {
+        top: 5px;
+        right: 5px;
+        padding: 3px 6px;
+        font-size: 9px;
+      }
+      
+      .floating-hint {
+        font-size: 10px;
+        padding: 4px 8px;
+        max-width: 180px;
+      }
+      
+      .photo-grid {
+        max-height: calc(100vh - 80px);
+        padding: 8px;
+      }
+      
+      .status-controls {
+        bottom: 8px;
       }
     }
   </style>
@@ -1182,11 +1333,15 @@ function showFloatingHint(targetElement, message, position = 'top') {
   floatingHint.textContent = message;
   floatingHint.classList.add('show');
   
-  // Posicionamiento inteligente con límites seguros
+  // Posicionamiento inteligente con límites seguros - Optimizado para móvil
   const targetRect = targetElement.getBoundingClientRect();
   const phoneRect = document.getElementById('phone').getBoundingClientRect();
   const screenArea = document.getElementById('screenArea');
   const screenRect = screenArea.getBoundingClientRect();
+  
+  // Detectar si es móvil para ajustar márgenes
+  const isMobile = window.innerWidth <= 480;
+  const margin = isMobile ? 15 : 20;
   
   if (position === 'top') {
     const targetCenterX = targetRect.left - phoneRect.left + targetRect.width / 2;
@@ -1197,33 +1352,51 @@ function showFloatingHint(targetElement, message, position = 'top') {
     setTimeout(() => {
       const hintWidth = floatingHint.offsetWidth;
       
-      // Aplicar límites seguros
-      if (hintLeft - hintWidth/2 < 20) {
-        hintLeft = 20 + hintWidth/2;
+      // Aplicar límites seguros con márgenes móvil
+      if (hintLeft - hintWidth/2 < margin) {
+        hintLeft = margin + hintWidth/2;
       }
-      else if (hintLeft + hintWidth/2 > screenWidth - 20) {
-        hintLeft = screenWidth - 20 - hintWidth/2;
+      else if (hintLeft + hintWidth/2 > screenWidth - margin) {
+        hintLeft = screenWidth - margin - hintWidth/2;
       }
       
+      const topOffset = isMobile ? -35 : -50;
       floatingHint.style.left = `${hintLeft}px`;
-      floatingHint.style.top = `${targetRect.top - phoneRect.top - 50}px`;
+      floatingHint.style.top = `${targetRect.top - phoneRect.top + topOffset}px`;
       floatingHint.style.transform = 'translateX(-50%)';
     }, 10);
   } else if (position === 'left') {
-    floatingHint.style.left = `${targetRect.left - phoneRect.left - 10}px`;
+    const leftOffset = isMobile ? -5 : -10;
+    floatingHint.style.left = `${targetRect.left - phoneRect.left + leftOffset}px`;
     floatingHint.style.top = `${targetRect.top - phoneRect.top + targetRect.height / 2}px`;
     floatingHint.style.transform = 'translateX(-100%) translateY(-50%)';
   } else if (position === 'bottom') {
     const targetCenterX = targetRect.left - phoneRect.left + targetRect.width / 2;
-    floatingHint.style.left = `${targetCenterX}px`;
-    floatingHint.style.top = `${targetRect.top - phoneRect.top + targetRect.height + 10}px`;
-    floatingHint.style.transform = 'translateX(-50%)';
+    const screenWidth = screenRect.width;
+    let hintLeft = targetCenterX;
+    
+    setTimeout(() => {
+      const hintWidth = floatingHint.offsetWidth;
+      
+      if (hintLeft - hintWidth/2 < margin) {
+        hintLeft = margin + hintWidth/2;
+      }
+      else if (hintLeft + hintWidth/2 > screenWidth - margin) {
+        hintLeft = screenWidth - margin - hintWidth/2;
+      }
+      
+      const bottomOffset = isMobile ? 5 : 10;
+      floatingHint.style.left = `${hintLeft}px`;
+      floatingHint.style.top = `${targetRect.top - phoneRect.top + targetRect.height + bottomOffset}px`;
+      floatingHint.style.transform = 'translateX(-50%)';
+    }, 10);
   }
   
-  // Ocultar después de 5 segundos
+  // Tiempo extendido en móvil para mejor lectura
+  const hideDelay = isMobile ? 6000 : 5000;
   setTimeout(() => {
     floatingHint.classList.remove('show');
-  }, 5000);
+  }, hideDelay);
 }
 
 function showStepIndicator() {
