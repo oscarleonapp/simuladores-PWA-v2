@@ -599,6 +599,122 @@
       font-size: 14px;
     }
 
+    /* Sistema de Hints Paso a Paso */
+    .step-indicator {
+      position: absolute;
+      top: 20px;
+      right: 12px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 15px;
+      font-size: 11px;
+      font-weight: 600;
+      z-index: 45;
+      display: none;
+    }
+
+    .step-indicator.show {
+      display: block;
+    }
+
+    .floating-hint {
+      position: absolute;
+      background: rgba(0,0,0,0.9);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 30;
+      display: none;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      pointer-events: none;
+      max-width: 250px;
+      text-align: center;
+      word-wrap: break-word;
+      white-space: normal;
+      line-height: 1.3;
+    }
+
+    .floating-hint.show {
+      display: block;
+      animation: bounce 2s infinite;
+    }
+
+    .floating-hint::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border: 5px solid transparent;
+      border-top-color: rgba(0,0,0,0.9);
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-5px); }
+      60% { transform: translateY(-3px); }
+    }
+
+    /* Sistema de Resaltado */
+    .highlight {
+      background-color: rgba(255, 235, 59, 0.3);
+      animation: pulse-highlight 2s infinite;
+    }
+
+    @keyframes pulse-highlight {
+      0%, 100% { background-color: rgba(255, 235, 59, 0.3); }
+      50% { background-color: rgba(255, 235, 59, 0.5); }
+    }
+
+    .status-camera.highlight {
+      animation: pulse-status-camera 2s infinite;
+    }
+
+    @keyframes pulse-status-camera {
+      0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 2px rgba(255, 235, 59, 0.5);
+      }
+      50% { 
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.4), 0 0 0 4px rgba(255, 235, 59, 0.7);
+      }
+    }
+
+    .photo-option.highlight {
+      animation: pulse-photo 2s infinite;
+    }
+
+    @keyframes pulse-photo {
+      0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 2px rgba(255, 235, 59, 0.5);
+      }
+      50% { 
+        transform: scale(1.05);
+        box-shadow: 0 0 0 4px rgba(255, 235, 59, 0.8);
+      }
+    }
+
+    .send-button.highlight {
+      animation: pulse-send 2s infinite;
+    }
+
+    @keyframes pulse-send {
+      0%, 100% { 
+        background: var(--whatsapp-light);
+        transform: scale(1);
+      }
+      50% { 
+        background: #FFD700;
+        transform: scale(1.1);
+      }
+    }
+
     /* Responsive Design - Full viewport utilization */
     @media (max-width: 768px) {
       body {
@@ -863,6 +979,10 @@
           <button onclick="cerrarHelp()">Continuar</button>
         </div>
       </div>
+
+      <!-- Sistema de Hints Paso a Paso -->
+      <div class="step-indicator" id="stepIndicator">Paso 1 de 4</div>
+      <div class="floating-hint" id="floatingHint"></div>
     </div>
   </div>
 
@@ -911,6 +1031,25 @@ const hintMessages = [
 // Variables del simulador de Estados
 let currentScreen = 'main';
 let selectedPhoto = '';
+
+// Sistema de Hints Paso a Paso - Variables
+let currentStep = 1;
+let simulatorCompleted = false;
+
+// Configuración específica para WhatsApp Estados
+const stepTexts = [
+  'Paso 1 de 4: Toca el botón + para agregar estado',
+  'Paso 2 de 4: Selecciona una foto de la galería',  
+  'Paso 3 de 4: Escribe un mensaje (opcional)',
+  'Paso 4 de 4: Publica tu estado'
+];
+
+const specificHintMessages = [
+  "Busca el pequeño botón + (más) junto a 'Mi estado'",
+  "Elige cualquier foto que te guste de la galería",
+  "Puedes escribir algo sobre la foto o dejarla sin texto",
+  "Toca el botón → (flecha) para publicar tu estado"
+];
 
 // ------------------------------------------------------------------
 //  INTERACTIVIDAD DE APPS - Solo Dock
@@ -1008,11 +1147,11 @@ function cerrarSuccess() {
   document.getElementById('successModal').style.display = 'none';
 }
 
-function mostrarHint() {
-  const randomMessage = hintMessages[Math.floor(Math.random() * hintMessages.length)];
-  document.getElementById('hintMessage').textContent = randomMessage;
+function mostrarHint(customMessage = null) {
+  const message = customMessage || hintMessages[Math.floor(Math.random() * hintMessages.length)];
+  document.getElementById('hintMessage').textContent = message;
   document.getElementById('hintModal').style.display = 'flex';
-  logEvent('hint_shown');
+  logEvent('hint_shown', { step: currentStep });
 }
 
 function cerrarHint() {
@@ -1026,6 +1165,97 @@ function mostrarHelp() {
 
 function cerrarHelp() {
   document.getElementById('helpModal').style.display = 'none';
+}
+
+// ------------------------------------------------------------------
+//  SISTEMA DE HINTS PASO A PASO
+// ------------------------------------------------------------------
+
+function showFloatingHint(targetElement, message, position = 'top') {
+  const floatingHint = document.getElementById('floatingHint');
+  
+  if (!targetElement) {
+    console.warn('Target element not found for hint:', message);
+    return;
+  }
+  
+  floatingHint.textContent = message;
+  floatingHint.classList.add('show');
+  
+  // Posicionamiento inteligente con límites seguros
+  const targetRect = targetElement.getBoundingClientRect();
+  const phoneRect = document.getElementById('phone').getBoundingClientRect();
+  const screenArea = document.getElementById('screenArea');
+  const screenRect = screenArea.getBoundingClientRect();
+  
+  if (position === 'top') {
+    const targetCenterX = targetRect.left - phoneRect.left + targetRect.width / 2;
+    const screenWidth = screenRect.width;
+    let hintLeft = targetCenterX;
+    
+    // Cálculo dinámico después del render
+    setTimeout(() => {
+      const hintWidth = floatingHint.offsetWidth;
+      
+      // Aplicar límites seguros
+      if (hintLeft - hintWidth/2 < 20) {
+        hintLeft = 20 + hintWidth/2;
+      }
+      else if (hintLeft + hintWidth/2 > screenWidth - 20) {
+        hintLeft = screenWidth - 20 - hintWidth/2;
+      }
+      
+      floatingHint.style.left = `${hintLeft}px`;
+      floatingHint.style.top = `${targetRect.top - phoneRect.top - 50}px`;
+      floatingHint.style.transform = 'translateX(-50%)';
+    }, 10);
+  } else if (position === 'left') {
+    floatingHint.style.left = `${targetRect.left - phoneRect.left - 10}px`;
+    floatingHint.style.top = `${targetRect.top - phoneRect.top + targetRect.height / 2}px`;
+    floatingHint.style.transform = 'translateX(-100%) translateY(-50%)';
+  } else if (position === 'bottom') {
+    const targetCenterX = targetRect.left - phoneRect.left + targetRect.width / 2;
+    floatingHint.style.left = `${targetCenterX}px`;
+    floatingHint.style.top = `${targetRect.top - phoneRect.top + targetRect.height + 10}px`;
+    floatingHint.style.transform = 'translateX(-50%)';
+  }
+  
+  // Ocultar después de 5 segundos
+  setTimeout(() => {
+    floatingHint.classList.remove('show');
+  }, 5000);
+}
+
+function showStepIndicator() {
+  const stepIndicator = document.getElementById('stepIndicator');
+  stepIndicator.textContent = stepTexts[currentStep - 1];
+  stepIndicator.classList.add('show');
+}
+
+function hideStepIndicator() {
+  const stepIndicator = document.getElementById('stepIndicator');
+  stepIndicator.classList.remove('show');
+}
+
+function highlightElement(element, type = 'standard') {
+  if (!element) return;
+  
+  // Remover resaltados previos
+  element.classList.remove('highlight');
+  
+  // Aplicar nuevo resaltado
+  element.classList.add('highlight');
+  
+  // Auto-remover después de un tiempo
+  setTimeout(() => {
+    element.classList.remove('highlight');
+  }, 4000);
+}
+
+function showSpecificHint(step = null) {
+  const hintStep = step || currentStep;
+  const message = specificHintMessages[hintStep - 1] || "Sigue las instrucciones paso a paso";
+  mostrarHint(message);
 }
 
 // ------------------------------------------------------------------
@@ -1061,6 +1291,20 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Inicialización específica del simulador de Estados
   initializeWhatsAppStatus();
+  
+  // Inicializar sistema de hints
+  setTimeout(() => {
+    showStepIndicator();
+    
+    // Mostrar primer hint después de 2 segundos
+    setTimeout(() => {
+      const addStatusBtn = document.getElementById('addStatusBtn');
+      if (addStatusBtn) {
+        showFloatingHint(addStatusBtn, specificHintMessages[0], 'top');
+        highlightElement(addStatusBtn);
+      }
+    }, 2000);
+  }, 1000);
 });
 
 // ------------------------------------------------------------------
@@ -1073,7 +1317,12 @@ function initializeWhatsAppStatus() {
   
   // Setup add status button
   const addStatusBtn = document.getElementById('addStatusBtn');
-  addStatusBtn.addEventListener('click', openPhotoSelection);
+  addStatusBtn.addEventListener('click', () => {
+    // Limpiar highlights anteriores
+    document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+    
+    openPhotoSelection();
+  });
 
   // Setup back buttons
   const statusBackBtn = document.getElementById('statusBackBtn');
@@ -1084,7 +1333,12 @@ function initializeWhatsAppStatus() {
 
   // Setup publish button
   const publishBtn = document.getElementById('publishStatusBtn');
-  publishBtn.addEventListener('click', publishStatus);
+  publishBtn.addEventListener('click', () => {
+    // Limpiar highlights anteriores
+    document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+    
+    publishStatus();
+  });
 }
 
 function loadPhotoGallery() {
@@ -1109,7 +1363,12 @@ function loadPhotoGallery() {
     photoDiv.innerHTML = `<img src="${photoPath}${photo.file}" alt="${photo.name}">`;
     
     // Add click event listener
-    photoDiv.addEventListener('click', () => selectPhoto(photoDiv));
+    photoDiv.addEventListener('click', () => {
+      // Limpiar highlights anteriores
+      document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+      
+      selectPhoto(photoDiv);
+    });
     
     photoGrid.appendChild(photoDiv);
   });
@@ -1129,6 +1388,18 @@ function openPhotoSelection() {
   photoScreen.style.display = 'flex';
   
   currentScreen = 'photos';
+  currentStep = 2;
+  showStepIndicator();
+  
+  // Mostrar hint para selección de foto
+  setTimeout(() => {
+    const firstPhoto = document.querySelector('.photo-option');
+    if (firstPhoto) {
+      showFloatingHint(firstPhoto, specificHintMessages[1], 'top');
+      highlightElement(firstPhoto);
+    }
+  }, 1000);
+  
   logEvent('photo_selection_opened');
 }
 
@@ -1147,12 +1418,34 @@ function selectPhoto(photoOption) {
   selectedImage.src = selectedPhoto;
   
   currentScreen = 'preview';
+  currentStep = 3;
+  showStepIndicator();
   
   // Add visual feedback
   photoOption.style.transform = 'scale(0.95)';
   setTimeout(() => {
     photoOption.style.transform = 'scale(1)';
   }, 200);
+  
+  // Mostrar hint para texto opcional
+  setTimeout(() => {
+    const textInput = document.getElementById('statusTextInput');
+    if (textInput) {
+      showFloatingHint(textInput, specificHintMessages[2], 'top');
+      highlightElement(textInput);
+    }
+    
+    // Después de 3 segundos, resaltar el botón de publicar
+    setTimeout(() => {
+      currentStep = 4;
+      showStepIndicator();
+      const publishBtn = document.getElementById('publishStatusBtn');
+      if (publishBtn) {
+        showFloatingHint(publishBtn, specificHintMessages[3], 'left');
+        highlightElement(publishBtn);
+      }
+    }, 3000);
+  }, 1500);
   
   logEvent('photo_selected', { photo: photoName, path: photoPath });
 }
@@ -1172,7 +1465,7 @@ function publishStatus() {
   const statusText = document.getElementById('statusTextInput').value;
   
   if (!selectedPhoto) {
-    mostrarHint();
+    showSpecificHint(1);
     return;
   }
   
@@ -1181,11 +1474,15 @@ function publishStatus() {
   publishBtn.innerHTML = '⏳';
   publishBtn.disabled = true;
   
+  // Ocultar step indicator
+  hideStepIndicator();
+  
   // Log the successful publication
   logEvent('status_published_successfully', {
     photo: selectedPhoto,
     hasText: statusText.trim().length > 0,
-    textLength: statusText.length
+    textLength: statusText.length,
+    stepsCompleted: currentStep
   });
   
   // Show success after a short delay
