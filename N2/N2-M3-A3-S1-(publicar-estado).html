@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simulador: WhatsApp - Publicar Estado</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      /* Samsung One UI 7 Color Palette */
+      --samsung-bg: #F5F5F7;
+      --samsung-primary: #1976D2;
+      --samsung-accent: #FF6B35;
+      --phone-frame: #2C2C2E;
+      --phone-border: #1C1C1E;
+      --status-bg: rgba(0,0,0,0.95);
+      --text-primary: #1D1D1F;
+      --text-secondary: #8E8E93;
+      --battery-bg: #34C759;
+      --now-bar-bg: #007AFF;
+      --home-gradient: linear-gradient(135deg, #007aff3d 0%, #f5f5f7 50%, #007aff 100%);
+      --whatsapp-bg: #128C7E;
+      --whatsapp-light: #25D366;
+      --whatsapp-dark: #075E54;
+      --status-bg: #000000;
+      --status-overlay: rgba(0,0,0,0.3);
+    }
+
+    /* WhatsApp Status specific styles */
+    .status-camera {
+      width: 60px;
+      height: 60px;
+      background: var(--whatsapp-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .status-camera:hover {
+      transform: scale(1.1);
+    }
+
+    .status-preview {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .status-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .status-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    @media (max-width: 480px) {
+      .status-controls {
+        bottom: 10px;
+        left: 12px;
+        right: 12px;
+        gap: 12px;
+      }
+    }
+
+    .status-text-input {
+      flex: 1;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 20px;
+      padding: 12px 16px;
+      color: white;
+      font-size: 16px;
+      backdrop-filter: blur(10px);
+    }
+
+    .status-text-input::placeholder {
+      color: rgba(255,255,255,0.7);
+    }
+
+    .send-button {
+      width: 48px;
+      height: 48px;
+      background: var(--whatsapp-light);
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .send-button:hover {
+      background: var(--whatsapp-dark);
+      transform: scale(1.1);
+    }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      padding: 16px;
+      max-height: calc(100vh - 200px);
+      overflow-y: auto;
+    }
+    
+    @media (max-width: 480px) {
+      .photo-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 12px;
+      }
+    }
+
+    .photo-option {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .photo-option:hover {
+      transform: scale(1.05);
+    }
+
+    .photo-option img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    body {
+      background: var(--samsung-bg);
+      font-family: "Roboto", -apple-system, BlinkMacSystemFont, sans-serif;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    .phone-wrapper {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* Full Screen Responsive Container */
+    .phone {
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Status Bar - Hidden for full screen experience */
+    .samsung-status-bar {
+      display: none !important;
+    }
+
+    .samsung-status-bar.show {
+      display: flex;
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-time {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .status-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 24px;
+    }
+
+    /* One UI 7 Pill-shaped Battery */
+    .samsung-battery {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .battery-pill {
+      width: 20px;
+      height: 8px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .battery-pill-fill {
+      width: 85%;
+      height: 100%;
+      background: var(--battery-bg);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .signal-dots {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+    }
+
+    .signal-dot {
+      width: 3px;
+      background: #ffffff;
+      border-radius: 1px;
+    }
+
+    .signal-dot:nth-child(1) { height: 4px; }
+    .signal-dot:nth-child(2) { height: 6px; }
+    .signal-dot:nth-child(3) { height: 8px; }
+    .signal-dot:nth-child(4) { height: 10px; }
+
+    /* Now Bar - Ocultar completamente */
+    .now-bar {
+      display: none !important;
+    }
+
+    /* Screen Area */
+    .screen-area {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #ffffff;
+      transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .screen-area.on-screen {
+      background: #ffffff;
+    }
+
+    /* Samsung Home Screen - One UI 7 Clean */
+    .samsung-home {
+      width: 100%;
+      height: 100%;
+      background: var(--home-gradient);
+      display: none;
+      flex-direction: column;
+      justify-content: flex-end;
+      position: relative;
+    }
+
+    .samsung-home.show {
+      display: flex;
+    }
+
+    /* Pantalla limpia sin grid de apps - solo dock */
+    .samsung-apps-grid {
+      display: none; /* Ocultar grid principal - pantalla limpia */
+    }
+
+    .samsung-app-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      padding: 8px;
+      border-radius: 16px;
+    }
+
+    .samsung-app-icon:hover {
+      transform: scale(1.05);
+      background: rgba(255,255,255,0.1);
+    }
+
+    .samsung-app-icon:active {
+      transform: scale(0.95);
+    }
+
+    .app-icon-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 18px; /* One UI 7 rounded corners */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 6px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      font-size: 28px;
+      backdrop-filter: blur(10px);
+    }
+
+    .app-name {
+      font-size: 11px;
+      color: white;
+      text-align: center;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      font-weight: 500;
+      max-width: 60px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* One UI 7 App Icons - PNG Reales desde ../assets/one-ui-7/ */
+    .app-icon-circle {
+      background: transparent !important; /* Fondo transparente real */
+      border: none;
+      box-shadow: none; /* Sin sombras para iconos reales */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .app-icon-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: inherit;
+    }
+    
+    /* CSS limpiado - ahora usamos elementos <img> directos */
+
+    /* Samsung Dock - One UI 7 Real Style */
+    .samsung-dock {
+      height: 80px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin: 20px 16px 24px;
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .dock-app {
+      width: 60px;
+      height: 60px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .dock-app:hover {
+      transform: scale(1.1);
+    }
+    
+    .dock-app img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: inherit;
+    }
+
+    /* Samsung Navigation Bar - One UI 7 */
+    .nav-home-indicator {
+      width: 140px;
+      height: 4px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 2px;
+    }
+
+    /* Physical Buttons - Hidden for PWA */
+    .samsung-power-btn,
+    .samsung-volume-btn {
+      display: none !important;
+    }
+
+    /* Animations */
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes vibrate {
+      0% { transform: translate(0); }
+      20% { transform: translate(-1px, 0); }
+      40% { transform: translate(1px, 0); }
+      60% { transform: translate(-1px, 0); }
+      80% { transform: translate(1px, 0); }
+      100% { transform: translate(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .vibrate {
+      animation: vibrate 0.1s ease-in-out 0s 6;
+    }
+
+    /* Scroll fix para navegador */
+    .samsung-browser {
+      overflow: hidden;
+    }
+    
+    .browser-content {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      height: 100% !important;
+      box-sizing: border-box;
+    }
+
+    /* Success Modal - Full screen */
+    #successModal {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.9);
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+      backdrop-filter: blur(20px);
+      border-radius: 0;
+    }
+
+    #successModal .success-content {
+      background: linear-gradient(135deg, #34C759, #30A14E);
+      color: white;
+      padding: 25px;
+      border-radius: 18px;
+      text-align: center;
+      max-width: 320px;
+      width: 90%;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+      transform: scale(0.95);
+    }
+
+    #successModal h3 {
+      font-size: 17px;
+      margin-bottom: 15px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    #successModal button {
+      padding: 10px 20px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.25);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+      font-size: 14px;
+    }
+
+    #successModal button:hover {
+      background: rgba(255,255,255,0.35);
+    }
+
+    /* Hint Modal - Full screen */
+    #hintModal {
+      display: none; 
+      position: absolute; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      background: rgba(0,0,0,0.9); 
+      justify-content: center; 
+      align-items: center; 
+      z-index: 60; 
+      border-radius: 0;
+    }
+
+    #hintModal .hint-content {
+      background: linear-gradient(135deg, #FF9500, #FF7A00); 
+      color: white; 
+      padding: 25px; 
+      border-radius: 18px; 
+      text-align: center; 
+      max-width: 320px;
+      width: 90%; 
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    }
+
+    #hintModal h3 {
+      font-size: 17px; 
+      margin-bottom: 15px; 
+      font-weight: 600; 
+      line-height: 1.3;
+    }
+
+    #hintModal button {
+      padding: 10px 20px; 
+      font-weight: 600; 
+      background: rgba(255,255,255,0.25); 
+      color: white; 
+      border: none; 
+      border-radius: 10px; 
+      cursor: pointer; 
+      font-size: 14px;
+    }
+
+    /* Help Modal - Full screen */
+    #helpModal {
+      display: none; 
+      position: absolute; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      background: rgba(0,0,0,0.9); 
+      justify-content: center; 
+      align-items: center; 
+      z-index: 60; 
+      border-radius: 0;
+    }
+
+    #helpModal .help-content {
+      background: linear-gradient(135deg, #007AFF, #0056CC); 
+      color: white; 
+      padding: 25px; 
+      border-radius: 18px; 
+      text-align: center; 
+      max-width: 350px;
+      width: 90%; 
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    }
+
+    #helpModal h3 {
+      font-size: 17px; 
+      margin-bottom: 15px; 
+      font-weight: 600; 
+      line-height: 1.3;
+    }
+
+    #helpModal button {
+      padding: 10px 20px; 
+      font-weight: 600; 
+      background: rgba(255,255,255,0.25); 
+      color: white; 
+      border: none; 
+      border-radius: 10px; 
+      cursor: pointer; 
+      font-size: 14px;
+    }
+
+    /* Responsive Design - Full viewport utilization */
+    @media (max-width: 768px) {
+      body {
+        padding: 0;
+      }
+      
+      .phone-wrapper {
+        width: 100vw;
+        height: 100vh;
+      }
+      
+      .phone {
+        width: 100vw;
+        height: 100vh;
+      }
+    }
+    
+    @media (min-width: 769px) {
+      body {
+        padding: 0;
+      }
+      
+      .phone-wrapper {
+        width: 100vw;
+        height: 100vh;
+      }
+      
+      .phone {
+        width: 100vw;
+        height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="phone-wrapper">
+  <div class="phone" id="phone">
+    <!-- Samsung One UI 7 Status Bar -->
+    <div class="samsung-status-bar" id="statusBar">
+      <div class="status-left">
+        <span class="status-time" id="statusTime">12:34</span>
+      </div>
+      <div class="status-right">
+        <div class="signal-dots">
+          <div class="signal-dot"></div>
+          <div class="signal-dot"></div>
+          <div class="signal-dot"></div>
+          <div class="signal-dot"></div>
+        </div>
+        <div class="samsung-battery">
+          <span>85%</span>
+          <div class="battery-pill">
+            <div class="battery-pill-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Now Bar - One UI 7 Feature -->
+    <div class="now-bar" id="nowBar">
+    </div>
+
+    <!-- Screen Area -->
+    <div class="screen-area on-screen" id="screenArea">
+
+      <!-- Samsung Home Screen - Clean Look -->
+      <div class="samsung-home" id="homeScreen" style="display: none;">
+        <!-- Pantalla limpia sin apps grid - solo dock en la parte inferior -->
+        
+        <!-- Logo Soy Digital centrado -->
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+          <img src="../assets/logo-soy-digital.png" alt="Soy Digital" style="max-width: 160px; height: auto; opacity: 0.8;">
+        </div>
+        
+        <!-- Samsung Dock -->
+        <div class="samsung-dock">
+          <div class="dock-app app-phone" data-app="phone"><img src="../assets/one-ui-7/telefono.png" alt="Teléfono"></div>
+          <div class="dock-app app-messages" data-app="messages"><img src="../assets/one-ui-7/mensajes.png" alt="Mensajes"></div>
+          <div class="dock-app app-camera" data-app="camera"><img src="../assets/one-ui-7/camara.png" alt="Cámara"></div>
+          <div class="dock-app app-gallery" data-app="gallery"><img src="../assets/one-ui-7/soy-digital.png" alt="Soy Digital"></div>
+        </div>
+      </div>
+
+      <!-- Samsung Browser Screen -->
+      <div class="samsung-browser" id="browserScreen" style="display: none; width: 100%; height: 100%; background: #ffffff; flex-direction: column;">
+        <!-- Browser Header -->
+        <div style="height: 50px; background: #f5f5f5; display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid #e0e0e0; margin-top: 0;">
+          <button id="browserBackBtn" style="width: 32px; height: 32px; border: none; background: transparent; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">←</button>
+          <div style="flex: 1; margin: 0 12px;">
+            <div style="background: #ffffff; border: 1px solid #ddd; border-radius: 20px; padding: 8px 16px; font-size: 14px; color: #666;">soydigital.gob.do</div>
+          </div>
+          <button style="width: 32px; height: 32px; border: none; background: transparent; font-size: 16px; cursor: pointer;">⋯</button>
+        </div>
+        
+        <!-- Browser Content -->
+        <div class="browser-content" style="flex: 1; padding: 16px; background: #ffffff; max-height: calc(100vh - 150px);">
+          <!-- Simulación de la página Soy Digital -->
+          <div style="text-align: center; margin-bottom: 30px;">
+            <img src="../assets/logo-soy-digital.png" alt="Soy Digital" style="max-width: 200px; height: auto; margin-bottom: 20px;">
+            <h1 style="color: #007AFF; font-size: 24px; font-weight: 700; margin-bottom: 10px;">Soy Digital</h1>
+            <p style="color: #666; font-size: 16px; margin-bottom: 20px;">República Dominicana</p>
+          </div>
+          
+          <div style="background: linear-gradient(135deg, #007AFF, #34C759); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 10px;">Transformación Digital</h2>
+            <p style="font-size: 14px; line-height: 1.5;">Impulsamos la digitalización en República Dominicana con programas educativos y tecnológicos para todos los ciudadanos.</p>
+          </div>
+          
+          <div style="display: grid; gap: 12px; margin-bottom: 20px;">
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 4px solid #007AFF;">
+              <h3 style="color: #007AFF; font-size: 16px; font-weight: 600; margin-bottom: 8px;">📚 Educación Digital</h3>
+              <p style="color: #666; font-size: 14px;">Programas de capacitación en tecnología móvil para adultos mayores.</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 4px solid #34C759;">
+              <h3 style="color: #34C759; font-size: 16px; font-weight: 600; margin-bottom: 8px;">🏛️ Servicios Gubernamentales</h3>
+              <p style="color: #666; font-size: 14px;">Acceso digital a trámites y servicios del gobierno dominicano.</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 4px solid #FF9500;">
+              <h3 style="color: #FF9500; font-size: 16px; font-weight: 600; margin-bottom: 8px;">🚀 Innovación</h3>
+              <p style="color: #666; font-size: 14px;">Impulso a la innovación tecnológica y emprendimiento digital.</p>
+            </div>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h2 style="color: #333; font-size: 18px; font-weight: 600; margin-bottom: 15px;">📞 Contacto</h2>
+            <p style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 10px;">📧 Email: info@soydigital.gob.do</p>
+            <p style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 10px;">📱 Teléfono: +1 (809) XXX-XXXX</p>
+            <p style="color: #666; font-size: 14px; line-height: 1.5;">📍 Dirección: Santo Domingo, República Dominicana</p>
+          </div>
+
+          <div style="background: #e3f2fd; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h2 style="color: #1976d2; font-size: 18px; font-weight: 600; margin-bottom: 15px;">💡 ¿Sabías que...?</h2>
+            <p style="color: #333; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">• República Dominicana es líder en transformación digital en el Caribe</p>
+            <p style="color: #333; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">• Más de 200,000 ciudadanos han sido capacitados en tecnología</p>
+            <p style="color: #333; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">• Los programas de Soy Digital están disponibles en todo el país</p>
+            <p style="color: #333; font-size: 14px; line-height: 1.5;">• La educación digital es gratuita para todos los ciudadanos</p>
+          </div>
+
+          <div style="text-align: center; margin-top: 40px; padding-bottom: 40px;">
+            <button onclick="window.open('https://www.soydigital.gob.do/', '_blank')" 
+                    style="background: #007AFF; color: white; border: none; padding: 12px 24px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.3);">
+              🌐 Visitar Sitio Web Completo
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- WhatsApp Status Interface -->
+      <div class="whatsapp-status-screen" id="whatsappStatusScreen" style="display: flex; width: 100%; height: 100%; background: var(--whatsapp-bg); flex-direction: column;">
+        <!-- WhatsApp Header -->
+        <div style="height: 60px; background: var(--whatsapp-bg); display: flex; align-items: center; padding: 0 16px; margin-top: 0; color: white;">
+          <button id="statusBackBtn" style="width: 32px; height: 32px; border: none; background: transparent; font-size: 18px; cursor: pointer; color: white;">←</button>
+          <div style="flex: 1; margin: 0 12px;">
+            <h3 style="margin: 0; font-size: 18px; font-weight: 500;">Estados</h3>
+          </div>
+          <button style="width: 32px; height: 32px; border: none; background: transparent; font-size: 18px; cursor: pointer; color: white;">⋯</button>
+        </div>
+
+        <!-- Status Main Screen -->
+        <div id="statusMainScreen" style="flex: 1; background: #ffffff; display: flex; flex-direction: column;">
+          <!-- My Status Section -->
+          <div style="padding: 16px; background: #f8f9fa; border-bottom: 1px solid #eee;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="position: relative;">
+                <div style="width: 50px; height: 50px; background: #e0e0e0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                  <span style="font-size: 20px; color: #666;">👤</span>
+                </div>
+                <div class="status-camera" id="addStatusBtn" style="position: absolute; bottom: -5px; right: -5px; width: 24px; height: 24px; font-size: 14px;">+</div>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 2px;">Mi estado</div>
+                <div style="color: #666; font-size: 13px;">Toca para agregar una actualización de estado</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Status Section -->
+          <div style="flex: 1; padding: 16px 0;">
+            <div style="padding: 0 16px; margin-bottom: 12px;">
+              <h4 style="color: #666; font-size: 14px; margin: 0; font-weight: 500;">Reciente</h4>
+            </div>
+            
+            <!-- Status Examples -->
+            <div style="padding: 0 16px;">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0; cursor: pointer;">
+                <div style="width: 50px; height: 50px; background: linear-gradient(45deg, var(--whatsapp-light), var(--whatsapp-dark)); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--whatsapp-light);">
+                  <span style="font-size: 16px; color: white; font-weight: bold;">M</span>
+                </div>
+                <div style="flex: 1;">
+                  <div style="font-weight: 500; margin-bottom: 2px;">María González</div>
+                  <div style="color: #666; font-size: 12px;">Hace 5 min</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Photo Selection Screen -->
+        <div id="photoSelectionScreen" style="flex: 1; background: #ffffff; display: none; flex-direction: column;">
+          <div style="padding: 16px; border-bottom: 1px solid #eee;">
+            <h4 style="margin: 0; color: #333; font-size: 16px;">Selecciona una foto</h4>
+          </div>
+          
+          <div class="photo-grid" id="photoGrid">
+            <!-- Photos will be loaded dynamically by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Status Preview Screen -->
+        <div id="statusPreviewScreen" style="flex: 1; background: #000000; display: none; flex-direction: column;">
+          <div class="status-preview">
+            <!-- Status Header -->
+            <div style="position: absolute; top: 20px; left: 16px; right: 16px; z-index: 10; display: flex; align-items: center; gap: 12px;">
+              <button id="previewBackBtn" style="width: 32px; height: 32px; border: none; background: transparent; font-size: 18px; cursor: pointer; color: white;">←</button>
+              <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+                <div style="width: 32px; height: 32px; background: #e0e0e0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                  <span style="font-size: 12px; color: #666;">👤</span>
+                </div>
+                <div style="color: white;">
+                  <div style="font-weight: 500; font-size: 14px;">Mi estado</div>
+                  <div style="font-size: 12px; opacity: 0.8;">Ahora</div>
+                </div>
+              </div>
+              <button style="width: 32px; height: 32px; border: none; background: transparent; font-size: 16px; cursor: pointer; color: white;">⋯</button>
+            </div>
+
+            <!-- Status Image -->
+            <img id="selectedImage" class="status-image" src="" alt="Selected photo">
+
+            <!-- Status Controls -->
+            <div class="status-controls">
+              <input type="text" class="status-text-input" id="statusTextInput" placeholder="Escribe algo...">
+              <button class="send-button" id="publishStatusBtn">→</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success Modal - Dentro de la pantalla -->
+      <div id="successModal">
+        <div class="success-content">
+          <h3 id="successMessage"></h3>
+          <button onclick="cerrarSuccess()">Continuar</button>
+        </div>
+      </div>
+
+      <!-- Hint Modal - Feedback de fallos -->
+      <div id="hintModal">
+        <div class="hint-content">
+          <h3 id="hintMessage"></h3>
+          <button onclick="cerrarHint()">Entendido</button>
+        </div>
+      </div>
+
+      <!-- Help Modal - Ayuda completa -->
+      <div id="helpModal">
+        <div class="help-content">
+          <h3 id="helpMessage">💡 AYUDA: Para publicar un estado en WhatsApp: 1) Toca el botón + (más) en "Mi estado", 2) Selecciona una foto de la galería, 3) Opcionalmente escribe un mensaje, 4) Toca el botón → para publicar tu estado.</h3>
+          <button onclick="cerrarHelp()">Continuar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ------------------------------------------------------------------
+//  CONFIGURACIÓN DE REGISTRO
+// ------------------------------------------------------------------
+const API_URL = '/api/logEvent';
+const USER_ID = 'samsungWhatsAppEstadoUser';
+
+function logEvent(action) {
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId: USER_ID,
+      action,
+      timestamp: Date.now()
+    })
+  }).catch(() => {/* Silenciar errores en demo/offline */});
+}
+
+// ------------------------------------------------------------------
+//  VARIABLES GLOBALES DEL TEMPLATE
+// ------------------------------------------------------------------
+const phone = document.getElementById('phone');
+const screenArea = document.getElementById('screenArea');
+const statusBar = document.getElementById('statusBar');
+const homeScreen = document.getElementById('homeScreen');
+
+// Mensajes de éxito para WhatsApp Estados
+const successMessages = [
+  "¡Excelente! Has publicado tu primer estado en WhatsApp correctamente",
+  "¡Perfecto! Ya sabes cómo compartir momentos con tus contactos",
+  "¡Muy bien! Ahora puedes publicar fotos en tus estados de WhatsApp"
+];
+
+const hintMessages = [
+  "Toca el botón + (más) para agregar un estado",
+  "Selecciona una foto de la galería",
+  "No olvides tocar el botón de enviar para publicar tu estado"
+];
+
+// Variables del simulador de Estados
+let currentScreen = 'main';
+let selectedPhoto = '';
+
+// ------------------------------------------------------------------
+//  INTERACTIVIDAD DE APPS - Solo Dock
+// ------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  const dockApps = document.querySelectorAll('.dock-app');
+  
+  dockApps.forEach(app => {
+    app.addEventListener('click', (e) => {
+      const appName = app.dataset.app || 'unknown';
+      logEvent(`samsung_dock_app_clicked_${appName}`);
+      
+      // Efecto visual mejorado
+      app.style.transform = 'scale(0.85)';
+      app.style.filter = 'brightness(1.2)';
+      
+      setTimeout(() => {
+        app.style.transform = 'scale(1)';
+        app.style.filter = 'brightness(1)';
+        
+        // Abrir aplicación específica
+        if (appName === 'gallery') {
+          openBrowser();
+        }
+        // AGREGAR AQUÍ: Lógica específica del simulador para otras apps
+      }, 200);
+    });
+  });
+});
+
+// ------------------------------------------------------------------
+//  NAVEGADOR SAMSUNG (OBLIGATORIO)
+// ------------------------------------------------------------------
+function openBrowser() {
+  const homeScreen = document.getElementById('homeScreen');
+  const browserScreen = document.getElementById('browserScreen');
+  
+  homeScreen.classList.remove('show');
+  browserScreen.style.display = 'flex';
+  
+  // Configurar botón de regresar
+  setupBrowserBackButton();
+  
+  logEvent('browser_opened_soydigital');
+}
+
+function closeBrowser() {
+  const homeScreen = document.getElementById('homeScreen');
+  const browserScreen = document.getElementById('browserScreen');
+  
+  browserScreen.style.display = 'none';
+  homeScreen.classList.add('show');
+  
+  logEvent('browser_closed');
+}
+
+function setupBrowserBackButton() {
+  const backBtn = document.getElementById('browserBackBtn');
+  
+  // Remover event listeners anteriores
+  backBtn.replaceWith(backBtn.cloneNode(true));
+  const newBackBtn = document.getElementById('browserBackBtn');
+  
+  // Agregar nuevo event listener
+  newBackBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Efecto visual
+    newBackBtn.style.background = 'rgba(0,0,0,0.1)';
+    setTimeout(() => {
+      newBackBtn.style.background = 'transparent';
+      closeBrowser();
+    }, 150);
+  });
+}
+
+// ------------------------------------------------------------------
+//  SISTEMA DE FEEDBACK (OBLIGATORIO)
+// ------------------------------------------------------------------
+function mostrarSuccess() {
+  const randomMessage = successMessages[Math.floor(Math.random() * successMessages.length)];
+  document.getElementById('successMessage').textContent = randomMessage;
+  document.getElementById('successModal').style.display = 'flex';
+  logEvent('success_feedback_shown');
+
+  // Emitir mensaje de finalización al host
+  window.parent.postMessage({
+    type: 'simulator_completed',
+    status: 'success'
+  }, '*');
+}
+
+function cerrarSuccess() {
+  document.getElementById('successModal').style.display = 'none';
+}
+
+function mostrarHint() {
+  const randomMessage = hintMessages[Math.floor(Math.random() * hintMessages.length)];
+  document.getElementById('hintMessage').textContent = randomMessage;
+  document.getElementById('hintModal').style.display = 'flex';
+  logEvent('hint_shown');
+}
+
+function cerrarHint() {
+  document.getElementById('hintModal').style.display = 'none';
+}
+
+function mostrarHelp() {
+  document.getElementById('helpModal').style.display = 'flex';
+  logEvent('help_message_shown');
+}
+
+function cerrarHelp() {
+  document.getElementById('helpModal').style.display = 'none';
+}
+
+// ------------------------------------------------------------------
+//  ACTUALIZAR TIEMPO
+// ------------------------------------------------------------------
+function updateDateTime() {
+  const now = new Date();
+  
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const timeString = `${hours}:${minutes}`;
+  
+  // Actualizar elementos
+  const statusTime = document.getElementById('statusTime');
+  if (statusTime) statusTime.textContent = timeString;
+}
+
+// ------------------------------------------------------------------
+//  INICIALIZACIÓN DEL TEMPLATE
+// ------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  // Teléfono ya encendido y desbloqueado
+  statusBar.classList.add('show');
+  
+  // Iniciar directamente en WhatsApp Estados
+  const whatsappStatusScreen = document.getElementById('whatsappStatusScreen');
+  whatsappStatusScreen.style.display = 'flex';
+  
+  updateDateTime();
+  setInterval(updateDateTime, 60000);
+  
+  logEvent('samsung_whatsapp_estado_started');
+  
+  // Inicialización específica del simulador de Estados
+  initializeWhatsAppStatus();
+});
+
+// ------------------------------------------------------------------
+//  WHATSAPP STATUS FUNCTIONALITY
+// ------------------------------------------------------------------
+
+function initializeWhatsAppStatus() {
+  // Load photo gallery
+  loadPhotoGallery();
+  
+  // Setup add status button
+  const addStatusBtn = document.getElementById('addStatusBtn');
+  addStatusBtn.addEventListener('click', openPhotoSelection);
+
+  // Setup back buttons
+  const statusBackBtn = document.getElementById('statusBackBtn');
+  statusBackBtn.addEventListener('click', showHelp);
+
+  const previewBackBtn = document.getElementById('previewBackBtn');
+  previewBackBtn.addEventListener('click', backToPhotoSelection);
+
+  // Setup publish button
+  const publishBtn = document.getElementById('publishStatusBtn');
+  publishBtn.addEventListener('click', publishStatus);
+}
+
+function loadPhotoGallery() {
+  // Solo fotos de la carpeta ../assets/img/
+  const availablePhotos = [
+    { file: 'jardin1.jpg', name: 'Jardín Hermoso' },
+    { file: 'jardin2.jpg', name: 'Flores Coloridas' },
+    { file: 'jardin3.jpg', name: 'Naturaleza Verde' },
+    { file: 'jardin4.jpg', name: 'Plantas Bonitas' }
+  ];
+
+  const photoGrid = document.getElementById('photoGrid');
+  photoGrid.innerHTML = '';
+
+  availablePhotos.forEach(photo => {
+    const photoPath = '../assets/img/';
+    const photoDiv = document.createElement('div');
+    photoDiv.className = 'photo-option';
+    photoDiv.dataset.photo = photo.file;
+    photoDiv.dataset.photoPath = photoPath;
+    
+    photoDiv.innerHTML = `<img src="${photoPath}${photo.file}" alt="${photo.name}">`;
+    
+    // Add click event listener
+    photoDiv.addEventListener('click', () => selectPhoto(photoDiv));
+    
+    photoGrid.appendChild(photoDiv);
+  });
+}
+
+function showHelp() {
+  // En lugar de salir, mostrar ayuda
+  mostrarHelp();
+  logEvent('status_back_pressed');
+}
+
+function openPhotoSelection() {
+  const mainScreen = document.getElementById('statusMainScreen');
+  const photoScreen = document.getElementById('photoSelectionScreen');
+  
+  mainScreen.style.display = 'none';
+  photoScreen.style.display = 'flex';
+  
+  currentScreen = 'photos';
+  logEvent('photo_selection_opened');
+}
+
+function selectPhoto(photoOption) {
+  const photoName = photoOption.dataset.photo;
+  const photoPath = '../assets/img/';
+  selectedPhoto = `${photoPath}${photoName}`;
+  
+  // Show preview screen
+  const photoScreen = document.getElementById('photoSelectionScreen');
+  const previewScreen = document.getElementById('statusPreviewScreen');
+  const selectedImage = document.getElementById('selectedImage');
+  
+  photoScreen.style.display = 'none';
+  previewScreen.style.display = 'flex';
+  selectedImage.src = selectedPhoto;
+  
+  currentScreen = 'preview';
+  
+  // Add visual feedback
+  photoOption.style.transform = 'scale(0.95)';
+  setTimeout(() => {
+    photoOption.style.transform = 'scale(1)';
+  }, 200);
+  
+  logEvent('photo_selected', { photo: photoName, path: photoPath });
+}
+
+function backToPhotoSelection() {
+  const previewScreen = document.getElementById('statusPreviewScreen');
+  const photoScreen = document.getElementById('photoSelectionScreen');
+  
+  previewScreen.style.display = 'none';
+  photoScreen.style.display = 'flex';
+  
+  currentScreen = 'photos';
+  logEvent('back_to_photo_selection');
+}
+
+function publishStatus() {
+  const statusText = document.getElementById('statusTextInput').value;
+  
+  if (!selectedPhoto) {
+    mostrarHint();
+    return;
+  }
+  
+  // Simulate publishing process
+  const publishBtn = document.getElementById('publishStatusBtn');
+  publishBtn.innerHTML = '⏳';
+  publishBtn.disabled = true;
+  
+  // Log the successful publication
+  logEvent('status_published_successfully', {
+    photo: selectedPhoto,
+    hasText: statusText.trim().length > 0,
+    textLength: statusText.length
+  });
+  
+  // Show success after a short delay
+  setTimeout(() => {
+    mostrarSuccess();
+  }, 1000);
+}
+
+</script>
+
+</body>
+</html>
